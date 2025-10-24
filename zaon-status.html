@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ZAON Status — Problemas agora</title>
+<meta name="description" content="Painel que lista serviços com incidentes em andamento (e os OK), direto de páginas oficiais de status.">
+<link rel="stylesheet" href="/css/style.css">
+
+<link rel="icon" href="/files/zaon_logo.jpeg">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logoBrand" aria-hidden="true">
+      <img id="dashLogo" class="logo" src="/files/zaon_logo.jpeg" alt="">
+    
+      <div class="title">
+        <b id="dashTitle">ZAON</b>
+        <span>Incidentes em andamento + serviços OK (atualiza a cada 60s)</span>
+      </div>
+    </div>
+    <button
+id="adminBtn"
+class="btn btn-admin"
+aria-label="Abrir Admin"
+aria-controls="adminDrawer"
+aria-expanded="false"
+>
+<!-- ícone hamburguer simples -->
+</span>
+<a href="/admin.html" class="btn btn-admin" aria-label="Ir para Admin">
+  <span class="admin-text">Admin</span>
+</a>
+</button>
+
+</div>
+  <div class="controls">
+
+    <span class="pill" id="status-pill">—</span>
+    <button class="btn" id="refreshBtn" title="Atalho: R">Atualizar agora <span id="countdown">(60s)</span></button>
+    <div>
+      <select id="region" title="Filtrar por região">
+        <option value="global" selected>Global</option>
+        <option value="latam">LATAM (beta)</option>
+      </select>
+      <span class="hint">filtra por Brasil, México, Argentina, etc.</span>
+    </div>
+    <label class="toggle" title="Mostrar somente serviços com incidentes">
+      <input type="checkbox" id="onlyIncidents">
+      <span>Apenas incidentes</span>
+    </label>
+    <input class="search" id="search" placeholder="Filtrar por nome/domínio…" />
+    
+  </div>
+      <!-- Botão Admin (hambúrguer) -->
+
+</header>
+
+<main>
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">Carregando…</div>
+</main>
+
+<footer>
+ Feito com ❤️ por ZAON| Pressione <b>R</b> para atualizar • <b>?</b> para ajuda.
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/scripts/dash.js"></script>   <!-- dentro de /js -->
+</body>
+</html>

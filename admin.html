@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ZAON Status - Admin</title>
+<meta name="description" content="Painel de administração do Dashboard de Status.">
+
+<link rel="stylesheet" href="/css/style.css"> 
+<link rel="stylesheet" href="/css/admin.css">
+
+<link rel="icon" href="/files/zaon_logo.jpeg">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div aria-hidden="true">
+      <img id="adminLogo" class="logo" src="/files/zaon_logo.jpeg" alt="">
+    </div>
+    <div class="title">
+      <b id="adminTitle">ZAON ADMIN</b>
+      <span>Paínel de administração do Dashboard</span>
+    </div>
+  </div>
+  <div class="controls">
+    <a href="/zaon-status.html" class="btn btn-admin" aria-label="Ir para Dashboard">
+      <span class="admin-text">Dashboard</span>
+    </a>
+  </div>
+</header>
+
+<main class="admin-main">
+  <div class="admin-grid">
+
+    <div class="col col-left">
+      <div class="card card-profile">
+        <div class="profile-avatar-container">
+          <img id="profileAvatar" class="profile-avatar" src="/files/zaon_logo.jpeg" alt="Avatar do Usuário">
+        </div>
+        <h2 id="profileName">ZAON</h2>
+        <button id="editProfileBtn" class="btn">Alterar Perfil</button>
+        <span id="profileStatus" class="status-indicator status-ok">Configurações carregadas do armazenamento local.</span>
+      </div>
+
+      <div class="card card-add-service">
+        <h2>Adicionar Novo Serviço</h2>
+        <form id="addServiceForm">
+          <div class="form-group">
+            <label for="serviceName">Nome do Serviço:</label>
+            <input type="text" id="serviceName" required>
+          </div>
+          <div class="form-group">
+            <label for="serviceUrl">URL Base/Domínio:</label>
+            <input type="url" id="serviceUrl" placeholder="https://status.exemplo.com" required>
+          </div>
+          <div class="form-group">
+            <label for="serviceApi">API summary.json URL:</label>
+            <input type="url" id="serviceApi" placeholder="https://api.exemplo.com/summary.json" required>
+          </div>
+          <button type="submit" class="btn btn-add">Adicionar Serviço</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col col-center">
+      <h2>Serviços Monitorados (<span id="serviceCount">0</span>)</h2>
+      <div id="servicesGrid" class="grid services-grid">
+        </div>
+      <div id="emptyServiceList" class="empty" style="display: none;">Nenhum serviço configurado. Adicione o seu primeiro serviço!</div>
+    </div>
+
+    <div class="col col-right">
+      <div class="card card-prefs">
+        <h2>Preferências Monitorações</h2>
+        <form id="prefsForm">
+          <div class="form-group">
+            <label for="updateInterval">Intervalo de atualização (segundos):</label>
+            <input type="number" id="updateInterval" min="10" value="60">
+          </div>
+          
+          <div class="form-group toggle-group">
+            <label for="filterLatam">Filtro LATAM por padrão:</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="filterLatam">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="form-group toggle-group">
+            <label for="themeToggle">Tema Escuro/Claro:</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="themeToggle">
+              <span class="slider"></span>
+              <span class="toggle-label-text">
+                <span id="themeText">Escuro</span>
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-save">Salvar Preferências</button>
+        </form>
+      </div>
+
+      <div class="card card-backup">
+        <h2>Backup & Restauração</h2>
+        <p>Salva todas as configurações (serviços e preferências) localmente.</p>
+        <div class="backup-controls">
+          <button id="exportConfigBtn" class="btn btn-export">⬇ Exportar Configurações</button>
+          <input type="file" id="importFile" accept="application/json" style="display: none;">
+          <button id="importConfigBtn" class="btn btn-import">⬆ Importar Configurações</button>
+        </div>
+        <small>A restauração de configurações **substituirá** as atuais.</small>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  Dados de páginas oficiais de status (Statuspage & APIs públicas). Não afiliado ao Downdetector. Pressione <b>R</b> para atualizar • <b>?</b> para ajuda.
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="profileModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h2>Editar Perfil</h2>
+    <form id="editProfileForm">
+      <div class="form-group">
+        <label for="newProfileName">Novo Nome do Painel:</label>
+        <input type="text" id="newProfileName" required>
+      </div>
+      <div class="form-group">
+        <label for="newProfileAvatar">Nova Imagem (Avatar/Logo):</label>
+        <input type="file" id="newProfileAvatar" accept="image/*">
+        <small>Arquivos grandes podem demorar para carregar. Melhor usar imagens pequenas (ex: 128x128).</small>
+      </div>
+      <button type="submit" class="btn btn-save">Salvar Alterações</button>
+    </form>
+  </div>
+</div>
+
+<div id="serviceEditModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h2>Editar Serviço</h2>
+    <form id="editServiceForm">
+      <input type="hidden" id="editServiceId">
+      <div class="form-group">
+        <label for="editServiceName">Nome do Serviço:</label>
+        <input type="text" id="editServiceName" required>
+      </div>
+      <div class="form-group">
+        <label for="editServiceUrl">URL Base/Domínio:</label>
+        <input type="url" id="editServiceUrl" required>
+      </div>
+      <div class="form-group">
+        <label for="editServiceApi">API summary.json URL:</label>
+        <input type="url" id="editServiceApi" required>
+      </div>
+      <button type="submit" class="btn btn-save">Salvar Edição</button>
+      <button type="button" id="deleteServiceBtn" class="btn btn-danger">Excluir Serviço</button>
+    </form>
+  </div>
+</div>
+
+<script src="/scripts/admin.js"></script>
+</body>
+</html>

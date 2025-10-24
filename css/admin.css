@@ -1,0 +1,305 @@
+/* admin.css - Estilos Específicos para o Painel de Administração */
+/* ---------------------------------------------------- */
+/* 1. Layout Principal (3 Colunas) */
+/* ---------------------------------------------------- */
+
+.admin-main {
+  padding: 20px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr 280px; /* Coluna esquerda (Perfil/Add) e direita (Prefs/Backup) fixas, centro flexível */
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.col h2 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--color-text-title); /* Reutiliza cor do style.css */
+}
+
+.col-left, .col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---------------------------------------------------- */
+/* 2. Estilos de Cards (Reutiliza .card do style.css) */
+/* ---------------------------------------------------- */
+
+.card-profile {
+  text-align: center;
+  padding: 20px;
+}
+
+.profile-avatar-container {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 15px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-profile h2 {
+  margin-bottom: 5px;
+
+}
+
+.status-indicator {
+  display: block;
+  font-size: 0.8em;
+  margin-top: 10px;
+}
+
+/* ---------------------------------------------------- */
+/* 3. Estilos de Formulário (Inputs) */
+/* ---------------------------------------------------- */
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="url"],
+input[type="number"],
+.modal-content input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--color-bg-darker); /* Fundo um pouco mais escuro */
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  font-size: 1em;
+  box-sizing: border-box;
+}
+
+input[type="number"] {
+  max-width: 100px; /* Input de intervalo menor */
+}
+
+/* ---------------------------------------------------- */
+/* 4. Toggle Switch (Checkbox Customizado) */
+/* ---------------------------------------------------- */
+
+.toggle-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-bg-darker);
+  transition: 0.4s;
+  border-radius: 34px;
+  border: 1px solid var(--color-border);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--color-status-ok); /* Cor verde quando ligado */
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.toggle-label-text {
+  position: absolute;
+  right: -70px; /* Posiciona o texto ao lado do switch */
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9em;
+}
+
+
+/* ---------------------------------------------------- */
+/* 5. Grid Central de Serviços (Cards de Administração) */
+/* ---------------------------------------------------- */
+
+/* Reutiliza .grid do style.css, mas com 3 colunas padrão */
+.services-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.service-admin-card {
+  /* Reutiliza .card do style.css */
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.service-header img {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+.service-header strong {
+  flex-grow: 1;
+  font-size: 1em;
+  color: var(--color-text-title);
+}
+
+.service-url {
+  font-size: 0.8em;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+  margin-bottom: 10px;
+}
+
+.service-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto; /* Empurra para baixo */
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.service-controls .btn {
+  padding: 5px 10px;
+  font-size: 0.85em;
+}
+
+/* Reutilizando Toggle Switch para o controle de ativo/inativo */
+.service-controls .toggle-switch {
+  width: 40px;
+  height: 20px;
+}
+.service-controls .slider {
+  border-radius: 10px;
+}
+.service-controls .slider:before {
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+}
+.service-controls input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* ---------------------------------------------------- */
+/* 6. Modals (Pop-ups) */
+/* ---------------------------------------------------- */
+
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.8); /* Fundo escuro transparente */
+}
+
+.modal-content {
+  background-color: var(--color-bg-darker); /* Cor de fundo do card */
+  margin: 15% auto;
+  padding: 30px;
+  border: 1px solid var(--color-border);
+  width: 80%;
+  max-width: 500px;
+  border-radius: var(--border-radius-large);
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content h2 {
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 10px;
+}
+
+.close-btn {
+  color: var(--color-text-secondary);
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  cursor: pointer;
+
+}
+
+.close-btn:hover,
+.close-btn:focus {
+  color: var(--color-accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background-color: var(--color-status-error);
+  margin-top: 15px;
+}
+
+/* ---------------------------------------------------- */
+/* 7. Responsividade (Opcional, mas recomendado) */
+/* ---------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .admin-grid {
+      grid-template-columns: 1fr; /* 1 coluna em telas menores */
+  }
+}

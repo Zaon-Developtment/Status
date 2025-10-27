@@ -63,7 +63,7 @@ const state = { prev:{}, nextAt: Date.now()+INTERVAL_MS, cycle:0, ticking:true }
 const LS_KEY = 'zaonConfig';
 
 const defaultConfig = {
-    profile: { name: 'ZAON', avatar: './files/zaon_logo.jpeg' },
+    profile: { name: 'ZAON', avatar: 'https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg' },
     // Apenas profile é importante por enquanto
 };
 

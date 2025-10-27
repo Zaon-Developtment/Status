@@ -8,8 +8,8 @@
  // Estrutura de configuração padrão
  const defaultConfig = {
      profile: {
-         name: 'ZAON ADMINZAO',
-         avatar: './files/zaon_logo.jpeg' // Logo padrão
+         name: 'ZAON ADMIN',
+         avatar: 'https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg' // Logo padrão
      },
      prefs: {
          theme: 'dark', 

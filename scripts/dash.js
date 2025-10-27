@@ -34,10 +34,10 @@ const CATALOG = {
   "Dropbox": "https://status.dropbox.com/api/v2/summary.json",
   "Reddit": "https://www.redditstatus.com/api/v2/summary.json",
   "WordPress.com": "https://wpcomstatus.com/api/v2/summary.json",
-  "monday.com": "https://status.monday.com/api/v2/summary.json"
+  "monday.com": "https://status.monday.com/api/v2/summary.json",
 
   // Exemplo de expansão:
-  // "Meta": "https://metastatus.com/api/v2/summary.json",
+  "Meta": "https://metastatus.com/api/v2/summary.json",
 };
 
 const FETCH_TIMEOUT_MS = 6500;

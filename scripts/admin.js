@@ -261,9 +261,18 @@ function loadConfig() {
           ...DEFAULT_CONFIG.prefs,
           ...(parsed.prefs || {}),
         },
-        services: Array.isArray(parsed.services)
-          ? parsed.services
-          : [...DEFAULT_CONFIG.services],
+        services: (() => {
+            const existing = Array.isArray(parsed.services) ? parsed.services : [];
+            const merged = [...DEFAULT_CONFIG.services];
+          
+            // adiciona os que não estão duplicados
+            existing.forEach(s => {
+              if (!merged.some(m => m.id === s.id)) {
+                merged.push(s);
+              }
+            });
+            return merged;
+          })(),
       };
     } catch (err) {
       console.error("[ZAON ADMIN] Erro lendo localStorage, usando padrão:", err);

@@ -1,7 +1,9 @@
 // dash.js - Lógica Principal do ZAON Status Dashboard (Ajuste Mínimo para Perfil)
 // --- Limpador automático de cache/localStorage ---
 // (garante que nenhum navegador use versão velha)
-(function hardResetZAON() {
+ 
+
+/*(function hardResetZAON() {
   try {
     // Remove config antiga
     localStorage.removeItem('zaonConfig');
@@ -13,7 +15,7 @@
   } catch(e) {
     console.warn('[ZAON] Falha ao limpar cache/localStorage:', e);
   }
-})();
+})(); */
 
 const CATALOG = {
   // AI / Dev
@@ -75,45 +77,59 @@ const state = { prev:{}, nextAt: Date.now()+INTERVAL_MS, cycle:0, ticking:true }
 
 
 // --- INÍCIO: LÓGICA DE PERFIL E PREFERÊNCIAS DO ADMIN ---
+// Chave única onde vamos guardar o perfil privado do usuário
 const LS_KEY = 'zaonConfig';
 
+// Conteúdo institucional padrão (o que TODO MUNDO vê na primeira vez)
 const defaultConfig = {
-    profile: { name: 'ZAON', avatar: 'https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg' },
-    // Apenas profile é importante por enquanto
+    profile: {
+        name: 'ZAON',
+        avatar: 'https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg'
+    }
 };
 
-let zaonConfig = defaultConfig; 
+// Estado que vamos exibir na tela agora
+let activeConfig = { ...defaultConfig };
 
 /**
- * Carrega a configuração do perfil do Admin (apenas o necessário)
+ * Lê do localStorage e aplica, SE o usuário já tiver personalizado.
+ * Se não tiver nada salvo, mantém o default (ZAON público).
  */
-function loadAdminConfig() {
-    const storedConfig = localStorage.getItem(LS_KEY);
-    
-    if (storedConfig) {
+function loadPersonalConfig() {
+    const stored = localStorage.getItem(LS_KEY);
+
+    if (stored) {
         try {
-            const loadedConfig = JSON.parse(storedConfig);
-            
-            // Mescla APENAS o perfil
-            if (loadedConfig.profile) {
-                 zaonConfig.profile = { ...defaultConfig.profile, ...loadedConfig.profile };
+            const parsed = JSON.parse(stored);
+
+            // Merge suave: só substitui o que a pessoa customizou
+            if (parsed.profile) {
+                activeConfig.profile = {
+                    ...defaultConfig.profile,
+                    ...parsed.profile
+                };
             }
-        } catch (e) {
-            console.error("Falha ao carregar zaonConfig.", e);
+        } catch (err) {
+            console.error('[ZAON] Falha ao ler config salva:', err);
         }
     }
 
-    // APLICAR PROFILE
+    // Agora aplica visualmente no header
+    const headerLogo   = document.getElementById('dashLogo');
+    const headerTitleB = document.getElementById('dashTitle');
+
     if (headerLogo) {
-        headerLogo.src = zaonConfig.profile.avatar || defaultConfig.profile.avatar;
-    }
-    if (headerTitleB) {
-        headerTitleB.textContent = zaonConfig.profile.name || defaultConfig.profile.name;
+        headerLogo.src = activeConfig.profile.avatar || defaultConfig.profile.avatar;
     }
 
-    // NOTA: O INTERVAL_MS e o filtro LATAM do Admin estão ignorados
-    // para garantir que o Dashboard original volte a funcionar.
+    if (headerTitleB) {
+        headerTitleB.textContent = activeConfig.profile.name || defaultConfig.profile.name;
+    }
 }
+
+// roda assim que o script carregar
+loadPersonalConfig();
+
 // --- FIM: LÓGICA DE PERFIL E PREFERÊNCIAS DO ADMIN ---
 
 

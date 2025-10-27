@@ -4,7 +4,7 @@
  */
 // --- Limpador automático de cache/localStorage ---
 // (garante que nenhum navegador use versão velha)
-(function hardResetZAON() {
+/*(function hardResetZAON() {
     try {
       // Remove config antiga
       localStorage.removeItem('zaonConfig');
@@ -16,7 +16,7 @@
     } catch(e) {
       console.warn('[ZAON] Falha ao limpar cache/localStorage:', e);
     }
-  })();
+  })();*/
   
  const LOCAL_STORAGE_KEY = 'zaonConfig';
 
@@ -97,6 +97,45 @@
          showToast("Erro ao salvar configurações no seu navegador.", 'error');
      }
  }
+ /**
+ * Salva apenas o perfil pessoal do usuário no localStorage,
+ * para uso privado no dispositivo.
+ * @param {string} name - Nome desejado no header.
+ * @param {string} avatarUrl - URL ou base64 do avatar.
+ */
+function savePersonalProfile(name, avatarUrl) {
+    // Carrega o que já existe
+    const existingRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    let existing = {};
+
+    if (existingRaw) {
+        try {
+            existing = JSON.parse(existingRaw) || {};
+        } catch (e) {
+            existing = {};
+        }
+    }
+
+    // Garante que o objeto profile exista
+    if (!existing.profile) {
+        existing.profile = {};
+    }
+
+    // Atualiza apenas o que o usuário personalizou
+    if (name) {
+        existing.profile.name = name;
+    }
+    if (avatarUrl) {
+        existing.profile.avatar = avatarUrl;
+    }
+
+    // Salva de volta — apenas neste navegador/dispositivo
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(existing));
+
+    showToast("Perfil salvo neste dispositivo.", "success");
+    console.log("[ZAON ADMIN] Perfil pessoal salvo:", existing.profile);
+}
+
  
  // --- RENDERIZAÇÃO DA INTERFACE ---
  

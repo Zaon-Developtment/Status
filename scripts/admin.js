@@ -48,455 +48,500 @@
 // =======================================
 
 
-
-// ------------------------------------------------------
-// 1. CANAL DE SINCRONIZAÇÃO COM O DASHBOARD
-// ------------------------------------------------------
+/* ================================================
+   ZAON Admin Panel – Integração com Dashboard
+   ================================================
+   Este script controla:
+   - Perfil (nome e avatar)
+   - Serviços (adicionar, ocultar, remover)
+   - Intervalo de atualização (SECs)
+   - Importar / Exportar / Resetar configurações
+   - Sincronização em tempo real com o Dash via BroadcastChannel
+================================================== */
+// =======================================================
+// ZAON ADMIN PANEL - VERSÃO FINAL
+// =======================================================
 //
-// Vamos usar BroadcastChannel para mandar mensagens
-// entre o Admin e o Dashboard. Nome combinado: "zaon-sync"
+// Visão geral:
+// - Tudo roda local, sem backend
+// - O estado completo mora em localStorage na chave 'zaonConfig'
+// - Este painel Admin edita esse estado
+// - O Dashboard lê esse mesmo estado e exibe os resultados
+// - Sincronização em tempo real Admin -> Dash via BroadcastChannel("zaon-sync")
 //
-const syncChannel = new BroadcastChannel("zaon-sync");
+// O que este arquivo faz:
+// 1. Carrega e mantém um objeto config = { profile, prefs, services }
+// 2. Renderiza o Admin UI (perfil, serviços, prefs)
+// 3. Permite editar perfil (nome/avatar)
+// 4. Permite adicionar/editar/remover serviços + alternar visibilidade (active)
+// 5. Permite salvar intervalo SEC para o Dash
+// 6. Exportar / Importar toda a config
+// 7. Reset total da config para o padrão ZAON
+// 8. Notifica o Dash sempre que algo muda
+//
+// MUITO IMPORTANTE
+// - NÃO existe catálogo fixo de serviços aqui. O catálogo "base" pertence ao Dash.
+//   O Dash popula 'zaonConfig.services' (com active=true).
+//   O Admin só edita o que o Dash criou/salvou.
+// - Quando você reseta tudo no Admin, a gente limpa e volta pro padrão mínimo.
+//   Depois o Dash vai repopular os serviços padrões dele na próxima execução.
+//
+// =======================================================
 
-function broadcastUpdate(type) {
-  // Chamamos isso sempre que algo importante muda.
-  // O Dashboard pode ouvir e reagir sem reload.
-  try {
-    syncChannel.postMessage({
-      type,
-      timestamp: Date.now(),
-    });
-    console.log("[ZAON ADMIN] Broadcast enviado:", type);
-  } catch (err) {
-    console.warn("[ZAON ADMIN] Falha ao broadcast:", err);
-  }
+
+// -------------------------------------------------------
+// 0. Constantes centrais e estado em memória
+// -------------------------------------------------------
+
+const LOCAL_STORAGE_KEY = "zaonConfig"; // chave única de storage
+const SYNC_CHANNEL_NAME = "zaon-sync";  // canal de sync Admin <-> Dash
+
+// Canal Broadcast para avisar o Dash sempre que algo muda
+let syncChannel;
+try {
+  syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+} catch (err) {
+  console.warn("[ZAON ADMIN] BroadcastChannel não suportado:", err);
+  syncChannel = null;
 }
 
-
-
-// ------------------------------------------------------
-// 2. CONFIGURAÇÃO PADRÃO / ESTRUTURA DE DADOS
-// ------------------------------------------------------
-//
-// Esta é a "fábrica" do sistema. O reset volta para isso.
-// O Dashboard também deve refletir esses dados.
-//
-// - profile: nome e avatar exibidos no header (Admin e Dashboard)
-// - prefs: SEC de atualização
-// - services: lista de serviços monitorados
-//
-// OBS: 'active: true' significa "mostrar no Dashboard".
-//      'active: false' = oculto no Dashboard, mas ainda aparece no Admin.
-//      Se um serviço for EXCLUÍDO, ele some de vez.
-// ------------------------------------------------------
-
-const LOCAL_STORAGE_KEY = "zaonConfig";
-
-// Catálogo base (o mesmo conceito do CATALOG do dash.js).
-// Isso aqui será usado na rotina de reset, e para garantir mínimo inicial.
-const BASE_SERVICES = [
-  {
-    id: "openai",
-    name: "OpenAI (ChatGPT)",
-    url: "https://status.openai.com/",
-    api: "https://status.openai.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "slack",
-    name: "Slack",
-    url: "https://slack-status.com/",
-    api: "https://slack-status.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "notion",
-    name: "Notion",
-    url: "https://status.notion.so/",
-    api: "https://status.notion.so/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "github",
-    name: "GitHub",
-    url: "https://www.githubstatus.com/",
-    api: "https://www.githubstatus.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "cloudflare",
-    name: "Cloudflare",
-    url: "https://www.cloudflarestatus.com/",
-    api: "https://www.cloudflarestatus.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "gcp",
-    name: "Google Cloud (incidentes)",
-    url: "https://status.cloud.google.com/",
-    api: "https://status.cloud.google.com/incidents.json",
-    active: true,
-  },
-  {
-    id: "google_workspace",
-    name: "Google Workspace (Gmail/Drive)",
-    url: "https://www.google.com/appsstatus/dashboard/",
-    api: "https://www.google.com/appsstatus/dashboard/incidents.json",
-    active: true,
-  },
-  {
-    id: "discord",
-    name: "Discord",
-    url: "https://discordstatus.com/",
-    api: "https://discordstatus.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "dropbox",
-    name: "Dropbox",
-    url: "https://status.dropbox.com/",
-    api: "https://status.dropbox.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "reddit",
-    name: "Reddit",
-    url: "https://www.redditstatus.com/",
-    api: "https://www.redditstatus.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "wordpress",
-    name: "WordPress.com",
-    url: "https://wpcomstatus.com/",
-    api: "https://wpcomstatus.com/api/v2/summary.json",
-    active: true,
-  },
-  {
-    id: "monday",
-    name: "monday.com",
-    url: "https://status.monday.com/",
-    api: "https://status.monday.com/api/v2/summary.json",
-    active: true,
-  },
-];
-
-// Config padrão geral (reset volta pra isso)
-const DEFAULT_CONFIG = {
+// Estado atual em memória (carregado do localStorage)
+let zaonConfig = {
   profile: {
     name: "ZAON",
-    avatar:
-      "https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg",
+    avatar: "https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg"
   },
   prefs: {
-    // SEC / intervalo de atualização em segundos
-    updateInterval: 60,
+    updateInterval: 60 // SECs padrão
   },
-  services: [...BASE_SERVICES],
+  services: [] // array de serviços [{id, name, url, api, active, ...}]
 };
 
-// Estado vivo em memória (editável)
-let zaonConfig = {};
-// Serviço atualmente em edição no modal
+// Serviço que está sendo editado no modal
 let currentServiceId = null;
 
 
+// -------------------------------------------------------
+// 1. Helpers utilitários
+// -------------------------------------------------------
 
-// ------------------------------------------------------
-// 3. TOAST / NOTIFICAÇÕES
-// ------------------------------------------------------
-//
-// Exibe mensagens rápidas (sucesso, erro etc.) por alguns segundos.
-//
+/**
+ * showToast(msg, type)
+ * Mostra uma notificação temporária no canto/tela.
+ * Espera que exista <div id="toast"> no admin.html
+ * type pode ser 'info', 'success', 'error'
+ */
 function showToast(message, type = "info") {
   const toast = document.getElementById("toast");
   if (!toast) return;
+
   toast.textContent = message;
   toast.className = `toast toast-${type}`;
   toast.style.display = "block";
+
   setTimeout(() => {
     toast.style.display = "none";
   }, 3000);
 }
 
+/**
+ * broadcastUpdate(kind)
+ * Envia uma mensagem pro Dashboard avisando que a config mudou.
+ * O Dash vai ouvir esse canal e atualizar:
+ * - nome/avatar no header
+ * - serviços ativos
+ * - intervalo SEC
+ * sem precisar recarregar.
+ */
+function broadcastUpdate(kind) {
+  if (!syncChannel) return;
+  try {
+    syncChannel.postMessage({
+      type: kind,
+      at: Date.now()
+    });
+    console.log("[ZAON ADMIN] Broadcast:", kind);
+  } catch (err) {
+    console.warn("[ZAON ADMIN] Falha ao broadcast:", err);
+  }
+}
+
+/**
+ * getFaviconUrl(service)
+ * Tenta gerar um favicon bonito pro serviço baseado no domínio.
+ * Se falhar, a UI cai num fallback '⚙️'.
+ */
+function getFaviconUrl(service) {
+  if (!service || !service.url) return "";
+
+  try {
+    const host = new URL(service.url).hostname;
+    // DuckDuckGo favicon service
+    return `https://icons.duckduckgo.com/ip3/${host}.ico`;
+  } catch (e) {
+    return "";
+  }
+}
 
 
-// ------------------------------------------------------
-// 4. CARREGAR E SALVAR CONFIG
-// ------------------------------------------------------
-//
-// loadConfig():
-//   - Lê localStorage.
-//   - Faz merge defensivo com DEFAULT_CONFIG (garante campos novos).
-//   - NÃO sobrescreve nada automaticamente.
-//
-// saveConfig():
-//   - Escreve no localStorage.
-//   - Re-renderiza a UI.
-//   - Notifica o Dashboard via broadcastUpdate().
-//
-// resetToFactoryDefaults():
-//   - Volta tudo pro estado "fábrica/primeiro uso".
-//   - Salva + rerender + broadcast.
-//
-// IMPORTANTE: tudo gira ao redor de LOCAL_STORAGE_KEY = 'zaonConfig'.
-//
+// -------------------------------------------------------
+// 2. Persistência localStorage
+// -------------------------------------------------------
 
+/**
+ * loadConfig()
+ * Carrega config salva do localStorage para a memória.
+ * Não faz merge com catálogo fixo nenhum.
+ * Se não existir nada no localStorage (primeiro acesso),
+ * mantém o objeto default (zaonConfig já declarado lá em cima).
+ */
 function loadConfig() {
-  const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
 
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) || {};
-
-      // Merge defensivo: garante que todas as chaves existam
+      // Monta objeto defensivo mas SEM criar catálogo
       zaonConfig = {
-        ...DEFAULT_CONFIG,
-        ...parsed,
         profile: {
-          ...DEFAULT_CONFIG.profile,
-          ...(parsed.profile || {}),
+          name: (parsed.profile && parsed.profile.name) ||
+            zaonConfig.profile.name,
+          avatar: (parsed.profile && parsed.profile.avatar) ||
+            zaonConfig.profile.avatar
         },
         prefs: {
-          ...DEFAULT_CONFIG.prefs,
-          ...(parsed.prefs || {}),
+          updateInterval: (parsed.prefs && parsed.prefs.updateInterval) ||
+            zaonConfig.prefs.updateInterval
         },
-        services: (() => {
-            const existing = Array.isArray(parsed.services) ? parsed.services : [];
-            const merged = [...DEFAULT_CONFIG.services];
-          
-            // adiciona os que não estão duplicados
-            existing.forEach(s => {
-              if (!merged.some(m => m.id === s.id)) {
-                merged.push(s);
-              }
-            });
-            return merged;
-          })(),
+        services: Array.isArray(parsed.services)
+          ? parsed.services
+          : []
       };
-    } catch (err) {
-      console.error("[ZAON ADMIN] Erro lendo localStorage, usando padrão:", err);
-      zaonConfig = structuredClone(DEFAULT_CONFIG);
     }
-  } else {
-    // Primeira vez: usa padrão de fábrica
-    zaonConfig = structuredClone(DEFAULT_CONFIG);
+  } catch (err) {
+    console.error("[ZAON ADMIN] loadConfig() erro:", err);
+    // fallback = usa zaonConfig já inicial
   }
+
+  console.log("[ZAON ADMIN] Config carregada:", zaonConfig);
 }
 
-function saveConfig() {
+/**
+ * saveConfig()
+ * Salva o estado atual em localStorage,
+ * re-renderiza a UI pra refletir as mudanças
+ * e avisa o Dash (broadcast).
+ */
+function saveConfig(reason = "config-updated") {
   try {
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY,
-      JSON.stringify(zaonConfig)
-    );
-    // Depois de salvar, atualiza UI
-    renderUI();
-    // E avisa o Dashboard que mudou (perfil, serviços, prefs...)
-    broadcastUpdate("config-updated");
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(zaonConfig));
   } catch (e) {
-    console.error("[ZAON ADMIN] Falha ao salvar config:", e);
+    console.error("[ZAON ADMIN] saveConfig() falhou:", e);
     showToast("Erro ao salvar no navegador.", "error");
+    return;
   }
+
+  renderUI();
+  broadcastUpdate(reason);
+  console.log("[ZAON ADMIN] Config salva com motivo:", reason);
 }
 
+/**
+ * resetToFactoryDefaults()
+ * Ação do botão "Resetar Tudo".
+ *
+ * O que ela faz:
+ * - Restaura o nome e avatar padrão ZAON.
+ * - Restaura prefs.updateInterval = 60.
+ * - Zera a lista de services ([])
+ *   (isso força o Dash, na próxima abertura/refresh dele,
+ *    a repopular os serviços padrões que ele conhece do CATALOG.)
+ * - Salva e sincroniza.
+ */
 function resetToFactoryDefaults() {
-  // Restaura o objeto inteiro como se fosse primeira vez
-  zaonConfig = structuredClone(DEFAULT_CONFIG);
+  zaonConfig = {
+    profile: {
+      name: "ZAON",
+      avatar: "https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg"
+    },
+    prefs: {
+      updateInterval: 60
+    },
+    services: []
+  };
 
-  // Persiste e re-renderiza
-  saveConfig();
-
-  // Mensagem visual
+  saveConfig("config-reset");
   showToast("Configurações resetadas para padrão ZAON.", "info");
-
-  // Informar dashboard para aplicar reset
-  broadcastUpdate("config-reset");
+  console.log("[ZAON ADMIN] Reset total concluído.");
 }
 
 
+// -------------------------------------------------------
+// 3. Renderização da UI
+// -------------------------------------------------------
 
-// ------------------------------------------------------
-// 5. RENDERIZAÇÃO DA INTERFACE
-// ------------------------------------------------------
-//
-// Temos 3 áreas principais:
-//   - Perfil / Cabeçalho
-//   - Lista de Serviços
-//   - Preferências (SEC)
-//
-// Cada uma tem sua função de render.
-//
-// renderUI() chama tudo.
-// ------------------------------------------------------
-
-// Função utilitária: gera URL de favicon baseada no domínio
-function getFaviconOrFallback(service) {
-  // 1. tenta extrair host
-  let host = "";
-  try {
-    host = new URL(service.url).hostname;
-  } catch (e) {
-    host = "";
-  }
-
-  // 2. monta favicon via DuckDuckGo (ícones públicos)
-  if (host) {
-    // Exemplo: https://icons.duckduckgo.com/ip3/status.cloud.google.com.ico
-    return `https://icons.duckduckgo.com/ip3/${host}.ico`;
-  }
-
-  // 3. fallback: engrenagem/ícone padrão
-  // você pode trocar depois por um caminho do seu projeto tipo "./files/gear.png"
-  return "";
-}
-
-// Renderiza header + card de perfil + pré-preenche preferências
+/**
+ * renderHeaderAndProfile()
+ * Atualiza o header do Admin e o card de perfil no painel:
+ * - #adminLogo, #adminTitle (header)
+ * - #profileAvatar, #profileName (card do perfil)
+ * - #updateInterval (prefs)
+ */
 function renderHeaderAndProfile() {
-  const profile = zaonConfig.profile || {};
-  const prefs = zaonConfig.prefs || {};
+  const profile = zaonConfig.profile;
+  const prefs = zaonConfig.prefs;
 
-  // HEADER (logo + título)
+  // Atualiza header topo
   const headerLogo = document.getElementById("adminLogo");
   const headerTitle = document.getElementById("adminTitle");
+
   if (headerLogo) {
-    headerLogo.src = profile.avatar || DEFAULT_CONFIG.profile.avatar;
+    headerLogo.src = profile.avatar || "";
   }
   if (headerTitle) {
-    headerTitle.innerHTML = `<b>${profile.name || DEFAULT_CONFIG.profile.name}</b>`;
+    headerTitle.innerHTML = `<b>${profile.name || "ZAON"}</b>`;
   }
 
-  // CARD DE PERFIL (avatar grande + nome grande)
+  // Atualiza card Perfil à esquerda
   const profileAvatar = document.getElementById("profileAvatar");
   const profileName = document.getElementById("profileName");
+
   if (profileAvatar) {
-    profileAvatar.src = profile.avatar || DEFAULT_CONFIG.profile.avatar;
+    profileAvatar.src = profile.avatar || "";
   }
   if (profileName) {
-    profileName.textContent = profile.name || DEFAULT_CONFIG.profile.name;
+    profileName.textContent = profile.name || "ZAON";
   }
 
-  // PREFERÊNCIAS (intervalo SEC)
+  // Atualiza intervalo SEC (lado direito)
   const updateIntervalInput = document.getElementById("updateInterval");
   if (updateIntervalInput) {
-    updateIntervalInput.value = prefs.updateInterval ?? DEFAULT_CONFIG.prefs.updateInterval;
+    updateIntervalInput.value = prefs.updateInterval ?? 60;
   }
 }
 
-// Renderiza a coluna central com TODOS os serviços
+/**
+ * renderServicesGrid()
+ * Atualiza a coluna central com a lista de serviços.
+ * Usa:
+ * - #servicesGrid (container dos cards)
+ * - #serviceCount
+ * - #emptyServiceList
+ *
+ * Cada card de serviço tem:
+ * - Ícone (favicon se disponível, fallback ⚙️)
+ * - Nome
+ * - URL
+ * - Toggle (checkbox) para active ON/OFF (mostrar/ocultar no Dash)
+ * - Botão Editar (abre modal de edição)
+ *
+ * IMPORTANTE:
+ * - NÃO TEM botão "Remover" visível nesse card.
+ *   Remover definitivo só dentro do modal.
+ */
 function renderServicesGrid() {
   const grid = document.getElementById("servicesGrid");
   const countEl = document.getElementById("serviceCount");
   const emptyEl = document.getElementById("emptyServiceList");
 
-  if (!grid || !countEl || !emptyEl) return;
+  if (!grid || !countEl || !emptyEl) {
+    console.warn("[ZAON ADMIN] Elementos de serviços ausentes no HTML.");
+    return;
+  }
 
   const services = zaonConfig.services || [];
 
-  // Atualiza contador
-  countEl.textContent = services.length.toString();
+  // Atualiza contador total
+  countEl.textContent = String(services.length);
 
-  // Mostra/oculta mensagem "vazio"
+  // Exibe/oculta aviso "Nenhum serviço configurado..."
   emptyEl.style.display = services.length === 0 ? "block" : "none";
 
-  // Limpa grid
+  // Limpa grid antes de recriar
   grid.innerHTML = "";
 
-  // Cria card visual pra cada serviço
+  // Monta cada card
   services.forEach((service) => {
+    // Calcula favicon
+    const favUrl = getFaviconUrl(service);
+
     const card = document.createElement("div");
     card.className = "card service-admin-card";
     card.setAttribute("data-id", service.id);
 
-    // Monta URL do favicon
-    const iconUrl = getFaviconOrFallback(service);
-
-    // HTML interno do card
     card.innerHTML = `
       <div class="service-header">
         <div class="service-icon-wrapper">
           ${
-            iconUrl
-              ? `<img src="${iconUrl}" class="service-icon" alt="Ícone do serviço" onerror="this.remove(); this.closest('.service-icon-wrapper').textContent='⚙';">`
-              : "⚙"
+            favUrl
+              ? `<img src="${favUrl}" class="service-icon" alt="Ícone do serviço"
+                   onerror="this.remove(); this.closest('.service-icon-wrapper').textContent='⚙️';">`
+              : "⚙️"
           }
         </div>
-        <strong>${service.name}</strong>
+        <strong>${service.name || "Serviço"}</strong>
       </div>
 
-      <span class="service-url">${service.url}</span>
+      <span class="service-url">${service.url || ""}</span>
 
       <div class="service-controls">
-        <!-- Toggle de visibilidade (OCULTAR do Dash) -->
         <label class="toggle-switch">
-          <input
-            type="checkbox"
-            data-id="${service.id}"
-            class="service-toggle"
-            ${service.active ? "checked" : ""}>
+          <input type="checkbox"
+                 data-id="${service.id}"
+                 class="service-toggle"
+                 ${service.active ? "checked" : ""}>
           <span class="slider"></span>
         </label>
-
-        <!-- Botão de edição abre modal -->
         <button class="btn btn-edit-service" data-id="${service.id}">Editar</button>
-
-        <!-- Botão de remoção (DELETE permanente) -->
-        <button class="btn btn-danger btn-remove-service" data-id="${service.id}">Remover</button>
       </div>
     `;
 
     grid.appendChild(card);
   });
 
-  // ====== LISTENERS DINÂMICOS DOS CARDS ======
-
-  // 1. Abrir modal de edição
-  document.querySelectorAll(".btn-edit-service").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const id = e.target.dataset.id;
-      openServiceEditModal(id);
-    });
-  });
-
-  // 2. Toggle "active" (ocultar/mostrar no Dash)
-  document.querySelectorAll(".service-toggle").forEach((toggle) => {
-    toggle.addEventListener("change", (e) => {
+  // Depois de montar o HTML de cada card, linka os eventos:
+  // Toggle de visibilidade (active on/off)
+  document.querySelectorAll(".service-toggle").forEach((input) => {
+    input.addEventListener("change", (e) => {
       const id = e.target.dataset.id;
       const checked = e.target.checked;
       toggleServiceActive(id, checked);
     });
   });
 
-  // 3. Remover serviço (excluir mesmo)
-  document.querySelectorAll(".btn-remove-service").forEach((btn) => {
+  // Botão "Editar" (que abre modal)
+  document.querySelectorAll(".btn-edit-service").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      const id = e.target.dataset.id;
-      handleDeleteService(id);
+      openServiceEditModal(e.target.dataset.id);
     });
   });
 }
 
-// Chama todas as renderizações relevantes
+/**
+ * renderUI()
+ * Chama as partes de renderização principais.
+ */
 function renderUI() {
   renderHeaderAndProfile();
   renderServicesGrid();
-  // Modal de perfil é preenchido on-open
+  // O conteúdo dos modais é preenchido on-demand (ao abrir)
 }
 
 
+// -------------------------------------------------------
+// 4. Perfil e Preferências
+// -------------------------------------------------------
 
-// ------------------------------------------------------
-// 6. CRUD DE SERVIÇOS
-// ------------------------------------------------------
-//
-// - Adicionar serviço novo
-// - Abrir modal de edição
-// - Salvar edição
-// - Remover (excluir mesmo do array)
-// - Ativar/Desativar (ocultar no Dash)
-//
+/**
+ * handleEditProfile(e)
+ * Salva alterações de nome e avatar através do modal "Editar Perfil".
+ *
+ * Fluxo:
+ * - Pega `newProfileName`
+ * - Se tiver novo arquivo em `newProfileAvatar`, lê como base64 e salva em zaonConfig.profile.avatar
+ * - Atualiza zaonConfig
+ * - saveConfig() -> que também broadcasta
+ */
+function handleEditProfile(e) {
+  e.preventDefault();
 
-// Adiciona um novo serviço usando o formulário "Adicionar Novo Serviço"
+  const newName = document.getElementById("newProfileName").value.trim();
+  const newAvatarFile = document.getElementById("newProfileAvatar").files[0];
+
+  let changedWithoutAvatar = false;
+
+  // Atualiza nome se mudou
+  if (newName && newName !== zaonConfig.profile.name) {
+    zaonConfig.profile.name = newName;
+    changedWithoutAvatar = true;
+  }
+
+  // Se o usuário escolheu um novo avatar (upload local)
+  if (newAvatarFile) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      zaonConfig.profile.avatar = event.target.result; // base64
+      saveConfig("config-updated");
+
+      // Fecha modal
+      const modal = document.getElementById("profileModal");
+      if (modal) modal.style.display = "none";
+
+      showToast("Perfil atualizado!", "success");
+    };
+    reader.onerror = () => {
+      showToast("Erro ao ler imagem.", "error");
+    };
+    reader.readAsDataURL(newAvatarFile);
+
+    return; // importante: sai aqui porque saveConfig já foi chamado no onload
+  }
+
+  // Se apenas o nome mudou (sem trocar avatar):
+  if (changedWithoutAvatar) {
+    saveConfig("config-updated");
+    showToast("Nome atualizado!", "success");
+  } else {
+    showToast("Nenhuma alteração feita.", "info");
+  }
+
+  // Fecha modal
+  const modal = document.getElementById("profileModal");
+  if (modal) modal.style.display = "none";
+}
+
+/**
+ * handleSavePrefs(e)
+ * Salva as preferências globais (por enquanto, só o intervalo SEC).
+ *
+ * SEC => prefs.updateInterval (em segundos).
+ *
+ * Depois:
+ * - saveConfig("config-updated") => escreve no localStorage
+ * - broadcastUpdate => Dash ouve
+ * - Dash atualiza o INTERVAL_MS e o countdown (sem recarregar).
+ */
+function handleSavePrefs(e) {
+  e.preventDefault();
+
+  const intervalInput = document.getElementById("updateInterval");
+  if (!intervalInput) {
+    showToast("Campo de intervalo não encontrado.", "error");
+    return;
+  }
+
+  const val = parseInt(intervalInput.value, 10);
+  if (isNaN(val) || val < 5) {
+    showToast("Intervalo inválido. Use >= 5s.", "error");
+    return;
+  }
+
+  zaonConfig.prefs.updateInterval = val;
+
+  saveConfig("config-updated");
+  showToast("Preferências salvas!", "success");
+}
+
+
+// -------------------------------------------------------
+// 5. Serviços: adicionar, editar, ocultar, remover
+// -------------------------------------------------------
+
+/**
+ * handleAddService(e)
+ * Adiciona um novo serviço a partir do formulário "Adicionar Novo Serviço".
+ *
+ * Campos no seu HTML:
+ * - #serviceName
+ * - #serviceUrl
+ * - #serviceApi
+ *
+ * Regras:
+ * - Gera um id único simples.
+ * - Cria o objeto do serviço.
+ * - Por padrão active = true (visível no Dash).
+ * - Salva e re-renderiza.
+ */
 function handleAddService(e) {
   e.preventDefault();
 
@@ -513,20 +558,21 @@ function handleAddService(e) {
     return;
   }
 
-  // Criar objeto do serviço
   const newService = {
-    id: "s" + Date.now(), // ID baseado no timestamp (simples)
+    id: "s" + Date.now(), // ID único baseado em timestamp
     name,
     url,
     api,
-    active: true,
+    active: true
   };
 
-  // Adiciona no array e salva
+  // Adiciona o novo serviço no array
   zaonConfig.services.push(newService);
-  saveConfig();
 
-  // Limpa campos
+  // Persiste
+  saveConfig("config-updated");
+
+  // Limpa o form
   nameEl.value = "";
   urlEl.value = "";
   apiEl.value = "";
@@ -534,226 +580,134 @@ function handleAddService(e) {
   showToast(`Serviço "${name}" adicionado!`, "success");
 }
 
-// Abre modal com dados do serviço selecionado
+/**
+ * openServiceEditModal(id)
+ * Abre o modal "Editar Serviço" já preenchido com os dados existentes.
+ *
+ * O modal no HTML tem:
+ * - input hidden #editServiceId
+ * - #editServiceName
+ * - #editServiceUrl
+ * - #editServiceApi
+ * - botão salvar (#editServiceForm submit)
+ * - botão excluir (#deleteServiceBtn)
+ */
 function openServiceEditModal(id) {
   currentServiceId = id;
-  const service = zaonConfig.services.find((s) => s.id === id);
-  if (!service) {
+
+  const svc = zaonConfig.services.find((s) => s.id === id);
+  if (!svc) {
     showToast("Serviço não encontrado.", "error");
     return;
   }
 
-  // Preenche campos no modal
-  document.getElementById("editServiceId").value = service.id;
-  document.getElementById("editServiceName").value = service.name;
-  document.getElementById("editServiceUrl").value = service.url;
-  document.getElementById("editServiceApi").value = service.api;
+  // Preenche o modal
+  document.getElementById("editServiceId").value = svc.id;
+  document.getElementById("editServiceName").value = svc.name || "";
+  document.getElementById("editServiceUrl").value = svc.url || "";
+  document.getElementById("editServiceApi").value = svc.api || "";
 
-  // Abre modal
+  // Mostra modal
   const modal = document.getElementById("serviceEditModal");
   if (modal) {
     modal.style.display = "block";
   }
 }
 
-// Salva alterações após editar no modal
+/**
+ * handleEditService(e)
+ * Salva alterações feitas no modal "Editar Serviço".
+ * Atualiza nome, url e api.
+ * NÃO mexe em active aqui.
+ */
 function handleEditService(e) {
   e.preventDefault();
 
   const id = document.getElementById("editServiceId").value;
-  const idx = zaonConfig.services.findIndex((s) => s.id === id);
+  const svcIndex = zaonConfig.services.findIndex((s) => s.id === id);
 
-  if (idx === -1) {
-    showToast("Erro ao salvar: serviço não encontrado.", "error");
+  if (svcIndex === -1) {
+    showToast("Erro: serviço não encontrado.", "error");
     return;
   }
 
-  zaonConfig.services[idx].name =
+  zaonConfig.services[svcIndex].name =
     document.getElementById("editServiceName").value.trim();
-  zaonConfig.services[idx].url =
+  zaonConfig.services[svcIndex].url =
     document.getElementById("editServiceUrl").value.trim();
-  zaonConfig.services[idx].api =
+  zaonConfig.services[svcIndex].api =
     document.getElementById("editServiceApi").value.trim();
 
-  saveConfig();
+  saveConfig("config-updated");
 
-  // fecha modal
+  // Fecha modal
   const modal = document.getElementById("serviceEditModal");
-  if (modal) {
-    modal.style.display = "none";
-  }
+  if (modal) modal.style.display = "none";
 
   showToast("Serviço atualizado!", "success");
 }
 
-// Remover serviço PERMANENTEMENTE
-function handleDeleteService(idFromButton = null) {
-  // Caso seja chamado a partir do modal, lemos do campo hidden
-  const serviceId =
-    idFromButton || document.getElementById("editServiceId").value;
-
-  const svc = zaonConfig.services.find((s) => s.id === serviceId);
-  const svcName = svc ? svc.name : "este serviço";
-
+/**
+ * handleDeleteService()
+ * Chamado SOMENTE dentro do modal via botão #deleteServiceBtn.
+ * Remove realmente o serviço do array e salva.
+ * Depois fecha o modal.
+ */
+function handleDeleteService() {
+  const id = document.getElementById("editServiceId").value;
+  const svc = zaonConfig.services.find((s) => s.id === id);
   if (!svc) {
     showToast("Serviço não encontrado.", "error");
     return;
   }
 
-  const confirmed = confirm(`Remover "${svcName}" permanentemente?`);
+  const confirmed = confirm(
+    `Tem certeza que deseja remover definitivamente o serviço "${svc.name}"?`
+  );
   if (!confirmed) return;
 
-  // Filtra fora
-  zaonConfig.services = zaonConfig.services.filter(
-    (s) => s.id !== serviceId
-  );
+  // Remove do array
+  zaonConfig.services = zaonConfig.services.filter((s) => s.id !== id);
 
-  saveConfig();
+  saveConfig("config-updated");
 
-  // Fecha modal se estiver aberto
+  // Fecha modal
   const modal = document.getElementById("serviceEditModal");
-  if (modal) {
-    modal.style.display = "none";
-  }
+  if (modal) modal.style.display = "none";
 
-  showToast(`Serviço "${svcName}" removido.`, "info");
+  showToast(`Serviço "${svc.name}" removido.`, "info");
 }
 
-// Alterna active / oculto
-// active=true → aparece no Dash
-// active=false → oculto no Dash
+/**
+ * toggleServiceActive(id, activeVal)
+ * Chamado quando o usuário muda o toggle ON/OFF no card.
+ * Isso controla se o serviço aparece no Dash.
+ */
 function toggleServiceActive(id, activeVal) {
   const svc = zaonConfig.services.find((s) => s.id === id);
   if (!svc) return;
 
-  svc.active = activeVal;
-  saveConfig();
+  svc.active = activeVal ? true : false;
+
+  saveConfig("config-updated");
 
   showToast(
-    `Serviço "${svc.name}" ${activeVal ? "visível no Dashboard" : "ocultado do Dashboard"
-    }.`,
+    `Serviço "${svc.name}" ${svc.active ? "visível no Dashboard" : "ocultado do Dashboard"}.`,
     "info"
   );
 }
 
 
+// -------------------------------------------------------
+// 6. Backup (Exportar) / Importar JSON
+// -------------------------------------------------------
 
-// ------------------------------------------------------
-// 7. PERFIL (NOME + AVATAR DO HEADER)
-// ------------------------------------------------------
-//
-// handleEditProfile():
-// - lê nome novo e/ou avatar novo do modal "Editar Perfil"
-// - avatar é lido como Base64 DataURL e salvo local
-// - atualiza zaonConfig.profile e salva
-//
-// Abrir/fechar modal também é tratado no init.
-//
-
-function handleEditProfile(e) {
-  e.preventDefault();
-
-  const newName = document
-    .getElementById("newProfileName")
-    .value.trim();
-  const newAvatarFile =
-    document.getElementById("newProfileAvatar").files[0];
-
-  let updated = false;
-
-  // Atualiza nome
-  if (newName && newName !== zaonConfig.profile.name) {
-    zaonConfig.profile.name = newName;
-    updated = true;
-  }
-
-  // Atualiza avatar (se foi enviado arquivo)
-  if (newAvatarFile) {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      zaonConfig.profile.avatar = ev.target.result; // Base64
-      saveConfig();
-
-      // Fecha modal
-      const modal = document.getElementById("profileModal");
-      if (modal) modal.style.display = "none";
-
-      showToast("Perfil (nome/foto) atualizado!", "success");
-    };
-    reader.onerror = () => {
-      showToast("Erro ao ler imagem.", "error");
-    };
-    reader.readAsDataURL(newAvatarFile);
-    return; // Importante: sai aqui porque saveConfig já foi chamado no onload
-  }
-
-  // Se só mudou o nome:
-  if (updated) {
-    saveConfig();
-    showToast("Nome atualizado!", "success");
-  } else {
-    showToast("Nenhuma alteração feita.", "info");
-  }
-
-  // Fecha modal
-  const modal = document.getElementById("profileModal");
-  if (modal) modal.style.display = "none";
-}
-
-
-
-// ------------------------------------------------------
-// 8. PREFERÊNCIAS (SEC / INTERVALO DE ATUALIZAÇÃO)
-// ------------------------------------------------------
-//
-// handleSavePrefs():
-//  - Lê o campo "updateInterval"
-//  - Atualiza zaonConfig.prefs.updateInterval
-//  - Salva e sincroniza com Dash.
-//  - Não mexemos ainda em tema/filtro latam por sua decisão.
-//
-
-function handleSavePrefs(e) {
-  e.preventDefault();
-
-  const intervalInput = document.getElementById("updateInterval");
-  if (!intervalInput) {
-    showToast("Campo de intervalo não encontrado.", "error");
-    return;
-  }
-
-  const val = parseInt(intervalInput.value, 10);
-  if (isNaN(val) || val < 5) {
-    showToast("Intervalo inválido. Use um valor >= 5s.", "error");
-    return;
-  }
-
-  zaonConfig.prefs.updateInterval = val;
-  saveConfig();
-
-  showToast("Preferências salvas!", "success");
-}
-
-
-
-// ------------------------------------------------------
-// 9. BACKUP / RESTAURAÇÃO
-// ------------------------------------------------------
-//
-// exportConfig():
-//   - Baixa um arquivo JSON com o estado atual (zaonConfig).
-//
-// triggerImport():
-//   - Simula clique no <input type="file"> escondido.
-//
-// handleImportFile():
-//   - Lê o JSON escolhido
-//   - Sobrescreve zaonConfig com esse JSON
-//   - Salva + rerenderiza + broadcast
-//
-
+/**
+ * exportConfig()
+ * Faz download de um .json com a config atual completa.
+ * Inclui: profile, prefs, services.
+ */
 function exportConfig() {
-  // Só dados personalizáveis (é exatamente o zaonConfig atual)
   const dataStr = JSON.stringify(zaonConfig, null, 2);
   const blob = new Blob([dataStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -768,16 +722,29 @@ function exportConfig() {
   showToast("Backup exportado.", "success");
 }
 
+/**
+ * triggerImport()
+ * Aciona o input de arquivo escondido (#importFile).
+ */
 function triggerImport() {
   const fileInput = document.getElementById("importFile");
   if (fileInput) {
-    fileInput.value = ""; // limpa antes de abrir
+    // limpo pra permitir importar de novo o mesmo arquivo
+    fileInput.value = "";
     fileInput.click();
   }
 }
 
-function handleImportFile(event) {
-  const file = event.target.files[0];
+/**
+ * handleImportFile(e)
+ * Lê o arquivo .json selecionado e substitui TUDO na config:
+ * - profile
+ * - prefs
+ * - services
+ * Depois chama saveConfig("config-imported") e re-renderiza.
+ */
+function handleImportFile(e) {
+  const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
@@ -785,17 +752,13 @@ function handleImportFile(event) {
     try {
       const imported = JSON.parse(ev.target.result);
 
-      // Aqui a gente não faz merge defensivo.
-      // A importação SUBSTITUI TUDO que existe,
-      // conforme você pediu.
+      // substitui zaonConfig inteiro pelo arquivo importado
       zaonConfig = imported;
 
-      saveConfig();
+      saveConfig("config-imported");
       showToast("Configurações importadas!", "success");
-
-      broadcastUpdate("config-imported");
     } catch (err) {
-      console.error("[ZAON ADMIN] Erro ao importar JSON:", err);
+      console.error("[ZAON ADMIN] Import JSON erro:", err);
       showToast("Falha ao importar arquivo.", "error");
     }
   };
@@ -803,57 +766,51 @@ function handleImportFile(event) {
 }
 
 
-
-// ------------------------------------------------------
-// 10. INICIALIZAÇÃO / EVENT LISTENERS
-// ------------------------------------------------------
-//
-// Quando a página admin carrega (DOMContentLoaded):
-//   1. Carrega config do localStorage
-//   2. Renderiza UI inicial
-//   3. Conecta todos os botões, formulários e modais
-//   4. Garante fechamento de modal por clique fora
-//   5. Ativa o botão de RESET TOTAL
-//
+// -------------------------------------------------------
+// 7. Inicialização e listeners
+// -------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Carregar config atual
+  console.log("[ZAON ADMIN] Iniciando painel Admin...");
+
+  // 1. Carrega config atual do localStorage
   loadConfig();
 
-  // 2. Renderizar tudo
+  // 2. Renderiza UI completa
   renderUI();
 
-  // --- MODAL DE PERFIL ---
+  // ----- MODAIS -----
+
   const profileModal = document.getElementById("profileModal");
   const serviceEditModal = document.getElementById("serviceEditModal");
 
-  // Abrir modal "Editar Perfil"
+  // Botão "Alterar Perfil" abre o modal de perfil
   const editProfileBtn = document.getElementById("editProfileBtn");
   if (editProfileBtn) {
     editProfileBtn.addEventListener("click", () => {
-      // Preenche campo de nome atual
+      // Preenche campo nome atual
       const nameField = document.getElementById("newProfileName");
       if (nameField) {
         nameField.value = zaonConfig.profile.name || "";
       }
 
-      // Limpa input de arquivo
-      const avatarField = document.getElementById("newProfileAvatar");
-      if (avatarField) {
-        avatarField.value = "";
+      // Limpa o input de avatar
+      const avatarInput = document.getElementById("newProfileAvatar");
+      if (avatarInput) {
+        avatarInput.value = "";
       }
 
-      if (profileModal) profileModal.style.display = "block";
+      if (profileModal) {
+        profileModal.style.display = "block";
+      }
     });
   }
 
-  // X (close) dos modais
+  // X de fechar modal (tanto perfil quanto serviço)
   document.querySelectorAll(".close-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const modal = e.target.closest(".modal");
-      if (modal) {
-        modal.style.display = "none";
-      }
+      if (modal) modal.style.display = "none";
     });
   });
 
@@ -867,69 +824,69 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // --- FORMULÁRIOS E BOTÕES PRINCIPAIS ---
+  // ----- FORMULÁRIOS -----
 
-  // Adicionar novo serviço
-  const addServiceForm = document.getElementById("addServiceForm");
-  if (addServiceForm) {
-    addServiceForm.addEventListener("submit", handleAddService);
-  }
-
-  // Editar serviço (modal salvar)
-  const editServiceForm = document.getElementById("editServiceForm");
-  if (editServiceForm) {
-    editServiceForm.addEventListener("submit", handleEditService);
-  }
-
-  // Botão remover serviço dentro do modal
-  const deleteServiceBtn = document.getElementById("deleteServiceBtn");
-  if (deleteServiceBtn) {
-    deleteServiceBtn.addEventListener("click", () => {
-      handleDeleteService(); // vai ler o ID atual do modal
-    });
-  }
-
-  // Salvar perfil
+  // Form de perfil (salva nome e avatar)
   const editProfileForm = document.getElementById("editProfileForm");
   if (editProfileForm) {
     editProfileForm.addEventListener("submit", handleEditProfile);
   }
 
-  // Preferências (SEC)
+  // Form de adicionar serviço
+  const addServiceForm = document.getElementById("addServiceForm");
+  if (addServiceForm) {
+    addServiceForm.addEventListener("submit", handleAddService);
+  }
+
+  // Form de edição de serviço (no modal)
+  const editServiceForm = document.getElementById("editServiceForm");
+  if (editServiceForm) {
+    editServiceForm.addEventListener("submit", handleEditService);
+  }
+
+  // Botão "Excluir Serviço" (dentro do modal)
+  const deleteServiceBtn = document.getElementById("deleteServiceBtn");
+  if (deleteServiceBtn) {
+    deleteServiceBtn.addEventListener("click", handleDeleteService);
+  }
+
+  // Form de preferências (SECs)
   const prefsForm = document.getElementById("prefsForm");
   if (prefsForm) {
     prefsForm.addEventListener("submit", handleSavePrefs);
   }
 
-  // Exportar config
+  // ----- BACKUP / RESTORE -----
+
+  // Botão Exportar
   const exportBtn = document.getElementById("exportConfigBtn");
   if (exportBtn) {
     exportBtn.addEventListener("click", exportConfig);
   }
 
-  // Importar config
+  // Botão Importar (abre seletor de arquivo)
   const importBtn = document.getElementById("importConfigBtn");
   if (importBtn) {
     importBtn.addEventListener("click", triggerImport);
   }
 
-  // Input de arquivo escondido (import)
+  // Input de arquivo escondido que realmente lê o .json
   const importFileInput = document.getElementById("importFile");
   if (importFileInput) {
     importFileInput.addEventListener("change", handleImportFile);
   }
 
-  // RESET TOTAL (a gente ainda vai colocar o botão no HTML depois)
+  // Botão Reset Total (Resetar Tudo)
   const resetBtn = document.getElementById("resetConfigBtn");
   if (resetBtn) {
     resetBtn.addEventListener("click", () => {
-      const c = confirm(
-        "Tem certeza que quer resetar tudo para os padrões ZAON?\nIsso apaga avatar personalizado, serviços adicionados, e preferências."
+      const sure = confirm(
+        "Resetar tudo para o padrão ZAON?\nIsso vai apagar avatar customizado, serviços adicionados e prefs."
       );
-      if (!c) return;
+      if (!sure) return;
       resetToFactoryDefaults();
     });
   }
 
-  console.log("[ZAON ADMIN] Painel carregado e pronto.");
+  console.log("[ZAON ADMIN] Painel pronto.");
 });

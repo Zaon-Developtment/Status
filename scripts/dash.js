@@ -41,7 +41,7 @@ const CATALOG = {
 };
 
 const FETCH_TIMEOUT_MS = 6500;
-const INTERVAL_MS = 60000;
+let INTERVAL_MS = 60000;
 const MISS_THRESHOLD = 2; // remove após 2 ciclos sem ver a fonte
 const DDG_ICON = host => `https://icons.duckduckgo.com/ip3/${host}.ico`;
 
@@ -525,6 +525,54 @@ document.addEventListener("visibilitychange", ()=>{
   }
   empty.style.display = "none";
 })();
+// =========================================
+// 🔄 SINCRONIZAÇÃO COM O ADMIN PANEL (ZAON)
+// =========================================
+try {
+  const syncChannel = new BroadcastChannel("zaon-sync");
+
+  syncChannel.onmessage = (event) => {
+    const { type } = event.data || {};
+    console.log("[ZAON DASH] Atualização recebida do Admin:", type);
+
+    if (type === "config-updated" || type === "config-imported" || type === "config-reset") {
+      // Recarrega dados do localStorage
+      try {
+        const stored = localStorage.getItem("zaonConfig");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+
+          // Atualiza intervalos
+          if (parsed.prefs?.updateInterval) {
+            INTERVAL_MS = parsed.prefs.updateInterval * 1000;
+            console.log("[ZAON DASH] Intervalo de atualização alterado:", INTERVAL_MS, "ms");
+          }
+
+          // Atualiza perfil (nome e avatar)
+          if (parsed.profile) {
+            const logo = document.getElementById("dashLogo");
+            const title = document.getElementById("dashTitle");
+            if (logo) logo.src = parsed.profile.avatar;
+            if (title) title.textContent = parsed.profile.name;
+          }
+
+          // Atualiza lista de serviços se existir
+          if (Array.isArray(parsed.services)) {
+            window.zaonServices = parsed.services.filter(s => s.active);
+            console.log("[ZAON DASH] Serviços sincronizados:", window.zaonServices);
+            collect(true);
+          }
+        }
+      } catch (err) {
+        console.error("[ZAON DASH] Erro ao sincronizar config:", err);
+      }
+    }
+  };
+
+  console.log("[ZAON DASH] Canal de sincronização ativado.");
+} catch (err) {
+  console.warn("[ZAON DASH] Falha ao criar canal de sync:", err);
+}
 
 // start
 collect(false);

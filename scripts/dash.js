@@ -1,4 +1,19 @@
 // dash.js - Lógica Principal do ZAON Status Dashboard (Ajuste Mínimo para Perfil)
+// --- Limpador automático de cache/localStorage ---
+// (garante que nenhum navegador use versão velha)
+(function hardResetZAON() {
+  try {
+    // Remove config antiga
+    localStorage.removeItem('zaonConfig');
+
+    // Força o navegador a buscar sempre arquivos novos
+    if ('caches' in window) caches.keys().then(names => names.forEach(caches.delete));
+    
+    console.log('[ZAON] Limpeza automática executada.');
+  } catch(e) {
+    console.warn('[ZAON] Falha ao limpar cache/localStorage:', e);
+  }
+})();
 
 const CATALOG = {
   // AI / Dev

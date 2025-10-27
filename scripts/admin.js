@@ -148,7 +148,7 @@
  
          // Ícone: tenta usar favicon, senão usa um placeholder
          // NOTA: Para CORS, no ambiente de produção, este favicon.ico pode precisar de um proxy
-         const iconUrl = service.api || service.url ? `${new URL(service.url).origin}/favicon.ico` : '/files/zaon_logo.jpeg';
+         const iconUrl = service.api || service.url ? `${new URL(service.url).origin}/favicon.ico` : './files/zaon_logo.jpeg';
          
          card.innerHTML = `
              <div class="service-header">

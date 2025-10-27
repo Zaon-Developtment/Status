@@ -134,19 +134,7 @@ loadPersonalConfig();
 
 
 // Preferências persistentes
-(function loadPrefs() {
-  // 1. CHAMA A LEITURA DO PERFIL AQUI
-  loadAdminConfig(); 
 
-  // 2. Continua com as preferências locais do Dashboard
-  const r = localStorage.getItem("zaon.region");
-  const oi = localStorage.getItem("zaon.onlyIncidents");
-  const q = localStorage.getItem("zaon.search");
-  
-  if (r) regionSel.value = r;
-  if (oi) onlyIncidentsToggle.checked = oi === "1";
-  if (q) searchInput.value = q;
-})();
 
 function savePrefs(){
   localStorage.setItem("zaon.region", regionSel.value);

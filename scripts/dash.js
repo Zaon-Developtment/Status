@@ -30,14 +30,23 @@ const CATALOG = {
   "Google Workspace (Gmail/Drive)": "https://www.google.com/appsstatus/dashboard/incidents.json",
 
   // Comunicação / Mídia
-  "Discord": "https://discordstatus.com/api/v2/summary.json",
-  "Dropbox": "https://status.dropbox.com/api/v2/summary.json",
-  "Reddit": "https://www.redditstatus.com/api/v2/summary.json",
   "WordPress.com": "https://wpcomstatus.com/api/v2/summary.json",
   "monday.com": "https://status.monday.com/api/v2/summary.json",
 
   // Exemplo de expansão:
   "Meta": "https://metastatus.com/api/v2/summary.json",
+  // Redes Sociais
+"LinkedIn": "https://www.linkedin-status.com/api/v2/summary.json",
+"Instagram": "https://metastatus.com/api/v2/summary.json", // Meta cobre Instagram, Facebook e WhatsApp
+"Facebook": "https://metastatus.com/api/v2/summary.json",
+"WhatsApp": "https://metastatus.com/api/v2/summary.json",
+"YouTube": "https://www.google.com/appsstatus/dashboard/incidents.json", // Google Apps Status (inclui YouTube)
+
+// Marketing & Ads
+"Google Ads": "https://ads.google.com/status/api/v2/status.json", // OBS: Google Ads não tem JSON público, este é um placeholder
+"Amazon Web Services (AWS)": "https://status.aws.amazon.com/data.json", // dados via feed
+"Adobe": "https://status.adobe.com/api/v2/summary.json",
+
 };
 
 const FETCH_TIMEOUT_MS = 6500;

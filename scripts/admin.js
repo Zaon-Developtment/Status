@@ -9,7 +9,7 @@
  const defaultConfig = {
      profile: {
          name: 'ZAON ADMIN',
-         avatar: '/files/zaon_logo.jpeg' // Logo padrão
+         avatar: './files/zaon_logo.jpeg' // Logo padrão
      },
      prefs: {
          theme: 'dark', 

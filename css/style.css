@@ -138,9 +138,13 @@ select,
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 8px 12px;
+  padding: 8px 1px;
+  align-items: center;
   border-radius: 10px;
   font-size: 14px;
+}
+#region {
+text-align: center;
 }
 
 .toggle {

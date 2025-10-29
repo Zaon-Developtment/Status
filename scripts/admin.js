@@ -47,17 +47,6 @@
 //
 // =======================================
 
-
-/* ================================================
-   ZAON Admin Panel – Integração com Dashboard
-   ================================================
-   Este script controla:
-   - Perfil (nome e avatar)
-   - Serviços (adicionar, ocultar, remover)
-   - Intervalo de atualização (SECs)
-   - Importar / Exportar / Resetar configurações
-   - Sincronização em tempo real com o Dash via BroadcastChannel
-================================================== */
 // =======================================================
 // ZAON ADMIN PANEL - VERSÃO FINAL
 // =======================================================
@@ -87,6 +76,129 @@
 //   Depois o Dash vai repopular os serviços padrões dele na próxima execução.
 //
 // =======================================================
+const BASE_SERVICES = [
+  // AI / Dev
+  {
+    id: "openai",
+    name: "OpenAI (ChatGPT)",
+    url: "https://status.openai.com",
+    api: "https://status.openai.com/api/v2/summary.json",
+    active: true
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    url: "https://slack-status.com",
+    api: "https://slack-status.com/api/v2.0.0/current",
+    active: true
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    url: "https://www.notion-status.com",
+    api: null,
+    defaultStatus: "none", // força visual de OK
+    active: true
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    url: "https://www.githubstatus.com",
+    api: "https://www.githubstatus.com/api/v2/summary.json",
+    active: true
+  },
+
+  // Cloud & Google
+  {
+    id: "cloudflare",
+    name: "Cloudflare",
+    url: "https://www.cloudflarestatus.com",
+    api: "https://www.cloudflarestatus.com/api/v2/summary.json",
+    active: true
+  },
+  {
+    id: "gcloud",
+    name: "Google Cloud (incidentes)",
+    url: "https://status.cloud.google.com",
+    api: "https://status.cloud.google.com/incidents.json",
+    active: true
+  },
+  {
+    id: "gworkspace",
+    name: "Google Workspace (Gmail/Drive)",
+    url: "https://www.google.com/appsstatus/dashboard",
+    api: "https://www.google.com/appsstatus/dashboard/incidents.json",
+    active: true
+  },
+
+  // Comunicação / Mídia
+  {
+    id: "wordpress",
+    name: "WordPress.com",
+    url: "https://wordpress.com/status",
+    api: null,
+    defaultStatus: "none", // força visual de OK
+    active: true
+  },
+  {
+    id: "monday",
+    name: "monday.com",
+    url: "https://status.monday.com",
+    api: "https://status.monday.com/api/v2/summary.json",
+    active: true
+  },
+
+  // Redes Sociais / Meta
+  {
+    id: "meta",
+    name: "Meta",
+    url: "https://metastatus.com",
+    api: null,
+    defaultStatus: "none",
+    active: true
+  },
+  {
+    id: "linkedin",
+    name: "LinkedIn",
+    url: "https://www.linkedin-status.com",
+    api: "https://www.linkedin-status.com/api/v2/summary.json",
+    active: true
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    url: "https://www.google.com/appsstatus/dashboard",
+    api: "https://www.google.com/appsstatus/dashboard/incidents.json",
+    active: true
+  },
+
+  // Marketing & Ads
+  {
+    id: "googleads",
+    name: "Google Ads",
+    url: "https://ads.google.com",
+    api: null,
+    defaultStatus: "none", // força visual de OK
+    active: true
+  },
+  {
+    id: "aws",
+    name: "Amazon Web Services (AWS)",
+    url: "https://status.aws.amazon.com",
+    api: null,
+    defaultStatus: "none", // força visual de OK
+    active: true
+  },
+  {
+    id: "adobe",
+    name: "Adobe",
+    url: "https://status.adobe.com",
+    api: null,
+    defaultStatus: "none", // força visual de OK
+    active: true
+  }
+];
+
 
 
 // -------------------------------------------------------
@@ -195,36 +307,38 @@ function getFaviconUrl(service) {
  * Se não existir nada no localStorage (primeiro acesso),
  * mantém o objeto default (zaonConfig já declarado lá em cima).
  */
-function loadConfig() {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (raw) {
+ function loadConfig() {
+  const raw = localStorage.getItem("zaonConfig");
+
+  if (raw) {
+    try {
       const parsed = JSON.parse(raw);
-
-      // Monta objeto defensivo mas SEM criar catálogo
       zaonConfig = {
-        profile: {
-          name: (parsed.profile && parsed.profile.name) ||
-            zaonConfig.profile.name,
-          avatar: (parsed.profile && parsed.profile.avatar) ||
-            zaonConfig.profile.avatar
-        },
-        prefs: {
-          updateInterval: (parsed.prefs && parsed.prefs.updateInterval) ||
-            zaonConfig.prefs.updateInterval
-        },
-        services: Array.isArray(parsed.services)
-          ? parsed.services
-          : []
+        profile: parsed.profile || { name: "ZAON", avatar: "https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg" },
+        prefs: parsed.prefs || { updateInterval: 60 },
+        services: Array.isArray(parsed.services) ? parsed.services : []
       };
-    }
-  } catch (err) {
-    console.error("[ZAON ADMIN] loadConfig() erro:", err);
-    // fallback = usa zaonConfig já inicial
-  }
 
-  console.log("[ZAON ADMIN] Config carregada:", zaonConfig);
+      // ⚠️ Se os serviços estiverem vazios, repopula com os base
+      if (zaonConfig.services.length === 0) {
+        zaonConfig.services = BASE_SERVICES.map(s => ({ ...s }));
+        saveConfig("config-initialized");
+      }
+    } catch (err) {
+      console.error("[ZAON ADMIN] Erro ao carregar config:", err);
+    }
+  } else {
+    // ⚠️ Primeiro acesso: cria config do zero
+    zaonConfig = {
+      profile: { name: "ZAON", avatar: "https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg" },
+      prefs: { updateInterval: 60 },
+      services: BASE_SERVICES.map(s => ({ ...s }))
+    };
+    saveConfig("config-initialized");
+  }
 }
+
+
 
 /**
  * saveConfig()
@@ -267,12 +381,11 @@ function resetToFactoryDefaults() {
     prefs: {
       updateInterval: 60
     },
-    services: []
+    services: BASE_SERVICES.map(s => ({ ...s })) // cópia limpa
   };
 
   saveConfig("config-reset");
-  showToast("Configurações resetadas para padrão ZAON.", "info");
-  console.log("[ZAON ADMIN] Reset total concluído.");
+  showToast("Configurações restauradas para padrão ZAON.", "info");
 }
 
 

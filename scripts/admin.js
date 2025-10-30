@@ -372,7 +372,19 @@ function saveConfig(reason = "config-updated") {
  *    a repopular os serviços padrões que ele conhece do CATALOG.)
  * - Salva e sincroniza.
  */
-function resetToFactoryDefaults() {
+ function resetToFactoryDefaults() {
+  // 🔥 Limpa localStorage e cache do navegador
+  try {
+    localStorage.removeItem("zaonConfig");
+    if ("caches" in window) {
+      caches.keys().then(names => names.forEach(name => caches.delete(name)));
+    }
+    console.log("[ZAON] Cache e localStorage limpos.");
+  } catch (e) {
+    console.warn("[ZAON] Falha ao limpar cache/localStorage:", e);
+  }
+
+  // 🧠 Restaura config padrão
   zaonConfig = {
     profile: {
       name: "ZAON",

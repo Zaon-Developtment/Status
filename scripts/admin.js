@@ -91,7 +91,7 @@ const BASE_SERVICES = [
     url: "https://slack-status.com",
     api: "https://slack-status.com/api/v2.0.0/current",
     active: true
-  },
+  },/*
   {
     id: "notion",
     name: "Notion",
@@ -99,7 +99,7 @@ const BASE_SERVICES = [
     api: null,
     defaultStatus: "none", // força visual de OK
     active: true
-  },
+  },*/
   {
     id: "github",
     name: "GitHub",
@@ -130,7 +130,7 @@ const BASE_SERVICES = [
     api: "https://www.google.com/appsstatus/dashboard/incidents.json",
     active: true
   },
-
+/*
   // Comunicação / Mídia
   {
     id: "wordpress",
@@ -139,7 +139,7 @@ const BASE_SERVICES = [
     api: null,
     defaultStatus: "none", // força visual de OK
     active: true
-  },
+  }, */
   {
     id: "monday",
     name: "monday.com",
@@ -147,7 +147,7 @@ const BASE_SERVICES = [
     api: "https://status.monday.com/api/v2/summary.json",
     active: true
   },
-
+/*
   // Redes Sociais / Meta
   {
     id: "meta",
@@ -156,22 +156,22 @@ const BASE_SERVICES = [
     api: null,
     defaultStatus: "none",
     active: true
-  },
+  },*/
   {
     id: "linkedin",
     name: "LinkedIn",
     url: "https://www.linkedin-status.com",
     api: "https://www.linkedin-status.com/api/v2/summary.json",
     active: true
-  },
+  },/*
   {
     id: "youtube",
     name: "YouTube",
     url: "https://www.google.com/appsstatus/dashboard",
     api: "https://www.google.com/appsstatus/dashboard/incidents.json",
     active: true
-  },
-
+  }, */
+/*
   // Marketing & Ads
   {
     id: "googleads",
@@ -180,7 +180,7 @@ const BASE_SERVICES = [
     api: null,
     defaultStatus: "none", // força visual de OK
     active: true
-  },
+  },*/ /*
   {
     id: "aws",
     name: "Amazon Web Services (AWS)",
@@ -188,15 +188,15 @@ const BASE_SERVICES = [
     api: null,
     defaultStatus: "none", // força visual de OK
     active: true
-  },
-  {
+  },*/
+  /* {
     id: "adobe",
     name: "Adobe",
     url: "https://status.adobe.com",
     api: null,
     defaultStatus: "none", // força visual de OK
     active: true
-  }
+  } */
 ];
 
 

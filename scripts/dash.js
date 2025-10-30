@@ -152,11 +152,13 @@ function updateServiceCard(id, data) {
 
   const desc = el.querySelector(".desc");
   desc.textContent = description;
-
   const meta = el.querySelectorAll(".muted")[1];
   if (meta) {
-    meta.innerHTML = `Desde: ${timestamp} • <a href="${isSlack ? 'https://slack-status.com' : (data.page?.url || "#")}" target="_blank">ver status →</a>`;
+    const svc = state.services.find(s => s.id === id);
+    const link = svc?.pageUrl || svc?.url || "#";
+    meta.innerHTML = `Desde: ${timestamp} • <a href="${link}" target="_blank">ver status →</a>`;
   }
+  
 
   // 🔍 Detecta se é um incidente crítico
   let isCritical = false;
@@ -188,13 +190,14 @@ function updateServiceCard(id, data) {
     svc.timestamp = timestamp;
     svc.pageUrl = (isSlack || isGoogle) ? svc.url : (data.page?.url || svc.url);
        }
-
+  
   // 🔴 Aplica estilo visual se for crítico
   if (isCritical) {
     el.classList.add("alert");
   } else {
     el.classList.remove("alert");
   }
+  
 }
 
 
@@ -265,7 +268,8 @@ function renderSortedCards() {
 
     const meta = document.createElement("div");
     meta.className = "muted";
-    meta.innerHTML = `Desde: ${svc.timestamp || "—"} • <a href="${svc.pageUrl || "#"}" target="_blank">ver status →</a>`;
+    const link = svc.pageUrl || svc.url || "#";
+    meta.innerHTML = `Desde: ${svc.timestamp || "—"} • <a href="${link}" target="_blank">ver status →</a>`;
 
     card.append(row, desc, meta);
     grid.appendChild(card);
@@ -298,8 +302,9 @@ function renderAll() {
 
 // 🧠 Renderiza nome e avatar
 function renderHeader() {
-  const nameEl = document.getElementById("dashName");
-  const avatarEl = document.getElementById("dashAvatar");
+  const nameEl = document.getElementById("dashTitle");
+  const avatarEl = document.getElementById("dashLogo");
+  
 
   if (nameEl) nameEl.textContent = state.profile.name || "ZAON";
   if (avatarEl) avatarEl.src = state.profile.avatar || "";
@@ -376,7 +381,9 @@ function renderServices() {
       meta.innerHTML = `<a href="${svc.url}" target="_blank">ver status →</a>`;
     } else {
       desc.textContent = svc.description || "Aguardando dados…";
-      meta.innerHTML = `Desde: ${svc.timestamp || "—"} • <a href="${svc.pageUrl || "#"}" target="_blank">ver status →</a>`;
+      const link = svc.pageUrl || svc.url || "#";
+      meta.innerHTML = `Desde: ${svc.timestamp || "—"} • <a href="${svc.url}" target="_blank">ver status →</a>`;
+
     }
     
 
@@ -393,8 +400,26 @@ function renderServices() {
 
 // 🚀 Inicialização
 document.addEventListener("DOMContentLoaded", () => {
+  // Ativa botão "Atualizar agora"
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => {
+      state.nextAt = Date.now() + INTERVAL_MS;
+      refreshAllServices();
+    });
+  }
+
+  // Atalho de teclado: R
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "r") {
+      state.nextAt = Date.now() + INTERVAL_MS;
+      refreshAllServices();
+    }
+  });
+
   loadConfig();
   renderAll();
   startLoop();
 });
+
 console.log("Serviços carregados no Dash:", state.services);

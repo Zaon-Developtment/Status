@@ -437,7 +437,6 @@ document.addEventListener("DOMContentLoaded", () => {
       refreshAllServices();
     }
   });
-
   loadConfig();
   renderAll();
   startLoop();

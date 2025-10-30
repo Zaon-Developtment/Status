@@ -131,35 +131,12 @@ header {
   cursor: not-allowed;
 }
 
-select,
-.toggle,
-.search {
-  appearance: none;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 8px 1px;
-  align-items: center;
-  border-radius: 10px;
-  font-size: 14px;
-}
 #region {
 text-align: center;
 }
 
-.toggle {
-  display: none;
-  gap: 8px;
-  align-items: center;
-  cursor: pointer;
-}
-
 .toggle input {
   accent-color: #22d3ee;
-}
-
-.search {
-  display: none;
 }
 
 .grid {

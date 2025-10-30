@@ -153,7 +153,6 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(26px);
 }
-
 .toggle-label-text {
   position: absolute;
   right: -70px; /* Posiciona o texto ao lado do switch */
@@ -162,7 +161,9 @@ input:checked + .slider:before {
   font-size: 0.9em;
 }
 
-
+.btn-export{
+  margin-bottom: 5px;
+}
 /* ---------------------------------------------------- */
 /* 5. Grid Central de Serviços (Cards de Administração) */
 /* ---------------------------------------------------- */

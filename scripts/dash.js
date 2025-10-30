@@ -27,15 +27,35 @@ syncChannel.onmessage = (msg) => {
 // 🔧 Carrega config do localStorage
 function loadConfig() {
   const raw = localStorage.getItem("zaonConfig");
-  if (!raw) return;
+
+  if (!raw) {
+    // ⚠️ Primeira visita: cria config padrão
+    const defaultConfig = {
+      profile: {
+        name: "ZAON",
+        avatar: "https://zaon-developtment.github.io/Status/files/zaon_logo.jpeg"
+      },
+      prefs: {
+        updateInterval: 60
+      },
+      services: BASE_SERVICES.map(s => ({ ...s }))
+    };
+
+    localStorage.setItem("zaonConfig", JSON.stringify(defaultConfig));
+    state.profile = defaultConfig.profile;
+    INTERVAL_MS = defaultConfig.prefs.updateInterval * 1000;
+    state.nextAt = Date.now() + INTERVAL_MS;
+    state.services = defaultConfig.services.filter(s => s.active);
+
+    console.log("⚠️ Primeira visita: serviços padrão carregados.");
+    return;
+  }
 
   try {
     const parsed = JSON.parse(raw);
     state.profile = parsed.profile || state.profile;
     INTERVAL_MS = (parsed.prefs?.updateInterval || 60) * 1000;
     state.nextAt = Date.now() + INTERVAL_MS;
-
-    // ⚠️ Filtra apenas os serviços ativos
     state.services = (parsed.services || []).filter(s => s.active);
 
     console.log("Serviços ativos no Dash:", state.services);
@@ -43,6 +63,7 @@ function loadConfig() {
     console.error("[ZAON DASH] Erro ao carregar config:", e);
   }
 }
+
 
 
 // 🔄 Atualiza contador de tempo

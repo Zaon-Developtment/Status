@@ -896,7 +896,7 @@ function handleImportFile(e) {
 // -------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[ZAON ADMIN] Iniciando painel Admin...");
+  //console.log("[ZAON ADMIN] Iniciando painel Admin...");
 
   // 1. Carrega config atual do localStorage
   loadConfig();
@@ -1013,5 +1013,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  console.log("[ZAON ADMIN] Painel pronto.");
+ // console.log("[ZAON ADMIN] Painel pronto.");
 });
+
+console.log(`
+███████╗ █████╗  ██████╗ ███╗   ██╗
+╚══███╔╝██╔══██╗██╔═══██║████╗  ██║
+  ███╔╝ ███████║██║   ██║██╔██╗ ██║
+ ███╔╝  ██╔══██║██║   ██║██║╚██╗██║
+███████╗██║  ██║╚██████╔╝██║ ╚████║
+╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+`);

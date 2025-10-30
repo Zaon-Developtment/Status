@@ -58,7 +58,7 @@ function loadConfig() {
     state.nextAt = Date.now() + INTERVAL_MS;
     state.services = (parsed.services || []).filter(s => s.active);
 
-    console.log("Serviços ativos no Dash:", state.services);
+   // console.log("Serviços ativos no Dash:", state.services);
   } catch (e) {
     console.error("[ZAON DASH] Erro ao carregar config:", e);
   }
@@ -441,5 +441,13 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAll();
   startLoop();
 });
+console.log(`
+███████╗ █████╗  ██████╗ ███╗   ██╗
+╚══███╔╝██╔══██╗██╔═══██║████╗  ██║
+  ███╔╝ ███████║██║   ██║██╔██╗ ██║
+ ███╔╝  ██╔══██║██║   ██║██║╚██╗██║
+███████╗██║  ██║╚██████╔╝██║ ╚████║
+╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
 
-console.log("Serviços carregados no Dash:", state.services);
+`);
+//console.log("Serviços carregados no Dash:", state.services);

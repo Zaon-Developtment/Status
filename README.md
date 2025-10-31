@@ -11,7 +11,7 @@
 ██║  ██╝██╔══██║╚════██║██╔══██║
 ██████╝ ██║  ██║███████║██║  ██║
 ╚════╝  ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-
+```
 # 🛰️ ZAON Dashboard
 
 **Painel de monitoramento de serviços em tempo real**, com visual moderno, mensagens em português e foco total na experiência do usuário.

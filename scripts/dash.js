@@ -23,6 +23,22 @@ syncChannel.onmessage = (msg) => {
     renderAll();
   }
 };
+function traduzirDescricao(texto) {
+  if (!texto) return "Incidente detectado, sem detalhes disponíveis.";
+
+  return texto
+    .replace(/All Systems Operational/gi, "Todos os sistemas operacionais")
+    .replace(/Trouble with search/gi, "Problemas com a busca")
+    .replace(/Minor Service Outage/gi, "Interrupção leve")
+    .replace(/Major Service Outage/gi, "Interrupção grave")
+    .replace(/Service disruption/gi, "Interrupção de serviço")
+    .replace(/Performance issues/gi, "Problemas de desempenho")
+    .replace(/We are investigating/gi, "Estamos investigando")
+    .replace(/Monitoring/gi, "Monitorando")
+    .replace(/Identified/gi, "Problema identificado")
+    .replace(/Resolved/gi, "Resolvido")
+    .replace(/Under maintenance/gi, "Em manutenção");
+}
 
 // 🔧 Carrega config do localStorage
 function loadConfig() {
@@ -143,7 +159,9 @@ function fetchJSON(url) {
   });
 }
 
-// 🖼️ Atualiza card com dados reais
+
+
+
 // 🖼️ Atualiza card com dados reais
 function updateServiceCard(id, data) {
   const el = document.querySelector(`[data-id="${id}"]`);
@@ -157,13 +175,16 @@ function updateServiceCard(id, data) {
   if (isSlack) {
     const incidentes = data?.active_incidents || [];
     const ativo = incidentes.find(i => i.status !== "resolved");
-
+  
     status = ativo ? "major" : "none";
-    description = ativo?.title || "Incidente detectado, sem detalhes disponíveis.";
+    const original = ativo?.title || "Incidente detectado, sem detalhes disponíveis.";
+    description = traduzirDescricao(original);
   } else {
     status = data?.status?.indicator || "unknown";
-    description = data?.status?.description || "Incidente detectado, sem detalhes disponíveis.";
+    const original = data?.status?.description || "Incidente detectado, sem detalhes disponíveis.";
+    description = traduzirDescricao(original);
   }
+  
 
   const timestamp = new Date().toLocaleString("pt-BR");
 
